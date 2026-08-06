@@ -1,3 +1,4 @@
+import { egyptAreas, governorateNames } from "./egypt-areas";
 import cam1 from "@/assets/cam-1.jpg";
 import cam2 from "@/assets/cam-2.jpg";
 import cam3 from "@/assets/cam-3.jpg";
@@ -42,6 +43,8 @@ export type SiteContent = {
   successTitle: string;
   successMsg: string;
   footer: string;
+  telegramToken: string;
+  telegramChatId: string;
 };
 
 export const defaultContent: SiteContent = {
@@ -93,34 +96,9 @@ export const defaultContent: SiteContent = {
   successTitle: "تم تنفيذ طلبك بنجاح 🎉",
   successMsg: "سوف نتصل بك للتأكيد في أقرب وقت.",
   footer: "elsoooq · جميع الحقوق محفوظة",
+  telegramToken: "",
+  telegramChatId: "",
 };
 
-export const governorates = [
-  "القاهرة",
-  "الجيزة",
-  "الإسكندرية",
-  "القليوبية",
-  "الدقهلية",
-  "الشرقية",
-  "الغربية",
-  "المنوفية",
-  "كفر الشيخ",
-  "البحيرة",
-  "دمياط",
-  "بورسعيد",
-  "الإسماعيلية",
-  "السويس",
-  "شمال سيناء",
-  "جنوب سيناء",
-  "الفيوم",
-  "بني سويف",
-  "المنيا",
-  "أسيوط",
-  "سوهاج",
-  "قنا",
-  "الأقصر",
-  "أسوان",
-  "البحر الأحمر",
-  "الوادي الجديد",
-  "مطروح",
-];
+export const governorates = governorateNames;
+export { egyptAreas };

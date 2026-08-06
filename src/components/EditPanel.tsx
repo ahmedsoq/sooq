@@ -1,15 +1,31 @@
-import { useRef } from "react";
-import { RotateCcw, Upload, X } from "lucide-react";
+import { useRef, useState } from "react";
+import { Check, Loader2, RotateCcw, Save, Send, Upload, X } from "lucide-react";
+import { useServerFn } from "@tanstack/react-start";
+import { testTelegram } from "@/lib/orders.functions";
+import { saveMedia, deleteMedia } from "@/lib/media-store";
 import type { SiteContent } from "@/lib/site-content";
 
 type Props = {
   content: SiteContent;
   update: (patch: Partial<SiteContent>) => void;
   reset: () => void;
+  saveAll: () => boolean;
   onClose: () => void;
 };
 
-export function EditPanel({ content, update, reset, onClose }: Props) {
+export function EditPanel({ content, update, reset, saveAll, onClose }: Props) {
+  const [saved, setSaved] = useState(false);
+
+  const handleSave = () => {
+    const ok = saveAll();
+    if (!ok) {
+      alert("تعذر حفظ التعديلات (مساحة المتصفح ممتلئة). جرب حذف صورة أو فيديو كبير.");
+      return;
+    }
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
+  };
+
   return (
     <aside className="fixed inset-y-0 left-0 z-60 w-full max-w-md overflow-y-auto border-r border-border bg-card p-4 shadow-2xl sm:w-[26rem]">
       <div className="mb-4 flex items-center justify-between">
@@ -26,6 +42,22 @@ export function EditPanel({ content, update, reset, onClose }: Props) {
           </button>
         </div>
       </div>
+
+      <button
+        onClick={handleSave}
+        className="mb-3 flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-bold text-primary-foreground"
+      >
+        {saved ? (
+          <>
+            <Check className="size-4" /> تم حفظ كل التعديلات
+          </>
+        ) : (
+          <>
+            <Save className="size-4" /> حفظ كل التعديلات
+          </>
+        )}
+      </button>
+
       <p className="mb-4 rounded-xl bg-secondary/60 p-3 text-xs text-muted-foreground">
         كل التعديلات تُحفظ تلقائياً على هذا الجهاز. للدخول لاحقاً: اضغط 7 مرات متتالية على اسم
         المتجر بالأعلى ثم أدخل <span className="gold-text font-bold">الرقم السري</span>.
@@ -41,12 +73,7 @@ export function EditPanel({ content, update, reset, onClose }: Props) {
       <Section title="القسم الرئيسي">
         <T label="شارة أعلى العنوان" v={content.heroBadge} on={(v) => update({ heroBadge: v })} />
         <T label="العنوان" v={content.heroTitle} on={(v) => update({ heroTitle: v })} />
-        <T
-          label="الوصف"
-          area
-          v={content.heroSubtitle}
-          on={(v) => update({ heroSubtitle: v })}
-        />
+        <T label="الوصف" area v={content.heroSubtitle} on={(v) => update({ heroSubtitle: v })} />
         <T label="نص زر الطلب" v={content.ctaText} on={(v) => update({ ctaText: v })} />
         <T label="نص الكمية المتبقية" v={content.stockText} on={(v) => update({ stockText: v })} />
       </Section>
@@ -90,8 +117,16 @@ export function EditPanel({ content, update, reset, onClose }: Props) {
         <FilePicker
           accept="video/*"
           label="رفع فيديو من الجهاز"
+          toIdb
+          maxMb={120}
           onPick={(src) => update({ videoSrc: src })}
         />
+        {content.videoSrc && (
+          <p className="mb-2 rounded-lg bg-secondary/60 p-2 text-[11px] text-muted-foreground">
+            ✅ يوجد فيديو محفوظ حالياً
+            {content.videoSrc.startsWith("idb://") ? " (مرفوع من الجهاز)" : ""}
+          </p>
+        )}
         <FilePicker
           accept="image/*"
           label="رفع صورة غلاف للفيديو"
@@ -118,12 +153,33 @@ export function EditPanel({ content, update, reset, onClose }: Props) {
         />
         {content.videoSrc && (
           <button
-            onClick={() => update({ videoSrc: "", videoPoster: "" })}
+            onClick={() => {
+              void deleteMedia(content.videoSrc);
+              update({ videoSrc: "", videoPoster: "" });
+            }}
             className="mb-2 rounded-lg bg-secondary px-3 py-2 text-xs"
           >
             حذف الفيديو
           </button>
         )}
+      </Section>
+
+      <Section title="إشعارات تليجرام">
+        <p className="mb-2 rounded-lg bg-secondary/60 p-2 text-[11px] leading-5 text-muted-foreground">
+          افتح <b>@BotFather</b> على تليجرام واعمل بوت جديد بأمر /newbot وانسخ التوكن هنا، ثم افتح
+          البوت واضغط <b>Start</b> عشان توصلك الطلبات.
+        </p>
+        <T
+          label="توكن البوت (Bot Token)"
+          v={content.telegramToken}
+          on={(v) => update({ telegramToken: v.trim() })}
+        />
+        <T
+          label="Chat ID (اختياري - يتم اكتشافه تلقائياً)"
+          v={content.telegramChatId}
+          on={(v) => update({ telegramChatId: v.trim() })}
+        />
+        <TelegramTest token={content.telegramToken} chatId={content.telegramChatId} />
       </Section>
 
       <Section title="الصور">
@@ -298,10 +354,14 @@ function FilePicker({
   onPick,
   accept,
   label,
+  toIdb,
+  maxMb = 4,
 }: {
   onPick: (src: string) => void;
   accept: string;
   label: string;
+  toIdb?: boolean;
+  maxMb?: number;
 }) {
   const ref = useRef<HTMLInputElement>(null);
   return (
@@ -321,8 +381,16 @@ function FilePicker({
         onChange={(e) => {
           const file = e.target.files?.[0];
           if (!file) return;
-          if (file.size > 4 * 1024 * 1024) {
-            alert("الملف كبير جداً (الحد 4 ميجا). ارفعه على يوتيوب وضع الرابط بدلاً من ذلك.");
+          if (file.size > maxMb * 1024 * 1024) {
+            alert(
+              `الملف كبير جداً (الحد ${maxMb} ميجا). ارفعه على يوتيوب وضع الرابط بدلاً من ذلك.`,
+            );
+            return;
+          }
+          if (toIdb) {
+            saveMedia(`video-${Date.now()}`, file)
+              .then((ref) => onPick(ref))
+              .catch(() => alert("تعذر حفظ الفيديو على المتصفح، جرب ملف أصغر أو رابط يوتيوب."));
             return;
           }
           const reader = new FileReader();
@@ -334,3 +402,34 @@ function FilePicker({
   );
 }
 
+function TelegramTest({ token, chatId }: { token: string; chatId: string }) {
+  const run = useServerFn(testTelegram);
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState("");
+
+  return (
+    <div className="mb-2">
+      <button
+        type="button"
+        disabled={busy || token.trim().length < 20}
+        onClick={async () => {
+          setBusy(true);
+          setMsg("");
+          try {
+            const r = await run({ data: { botToken: token.trim(), chatId: chatId || undefined } });
+            setMsg(r.message);
+          } catch {
+            setMsg("فشل الاتصال بالبوت، تأكد من التوكن.");
+          } finally {
+            setBusy(false);
+          }
+        }}
+        className="flex items-center gap-1 rounded-lg bg-secondary px-3 py-2 text-xs disabled:opacity-50"
+      >
+        {busy ? <Loader2 className="size-3.5 animate-spin" /> : <Send className="size-3.5" />}
+        إرسال رسالة تجريبية
+      </button>
+      {msg && <p className="mt-2 text-[11px] text-muted-foreground">{msg}</p>}
+    </div>
+  );
+}

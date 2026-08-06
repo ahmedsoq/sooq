@@ -44,7 +44,7 @@ export const Route = createFileRoute("/")({
 });
 
 function Index() {
-  const { content, update, reset, hydrated } = useContent();
+  const { content, update, reset, saveAll, hydrated } = useContent();
   const [active, setActive] = useState(0);
   const [orderOpen, setOrderOpen] = useState(false);
   const admin = useHiddenAdmin();
@@ -284,7 +284,13 @@ function Index() {
       )}
       {admin.askPin && <PinDialog onSubmit={admin.submitPin} onClose={admin.closePin} />}
       {admin.unlocked && (
-        <EditPanel content={content} update={update} reset={reset} onClose={admin.lock} />
+        <EditPanel
+          content={content}
+          update={update}
+          reset={reset}
+          saveAll={saveAll}
+          onClose={admin.lock}
+        />
       )}
     </div>
   );

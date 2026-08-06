@@ -2,14 +2,15 @@ import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { CheckCircle2, Loader2, Minus, Plus, X } from "lucide-react";
 import { submitOrder } from "@/lib/orders.functions";
-import { governorates, type SiteContent } from "@/lib/site-content";
+import { governorates, egyptAreas, type SiteContent } from "@/lib/site-content";
 
 type Props = { content: SiteContent; onClose: () => void };
 
 export function OrderDialog({ content, onClose }: Props) {
   const send = useServerFn(submitOrder);
   const [qty, setQty] = useState(1);
-  const [form, setForm] = useState({ name: "", phone: "", address: "", governorate: "" });
+  const [form, setForm] = useState({ name: "", phone: "", address: "", governorate: "", center: "" });
+  const centers = form.governorate ? (egyptAreas[form.governorate] ?? []) : [];
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
@@ -25,6 +26,7 @@ export function OrderDialog({ content, onClose }: Props) {
     if (!/^0?1[0-2,5]\d{8}$/.test(form.phone.trim().replace(/\s/g, "")))
       return setError("رقم تليفون غير صحيح (مثال: 01012345678)");
     if (!form.governorate) return setError("اختر المحافظة");
+    if (centers.length > 0 && !form.center) return setError("اختر المركز أو المدينة");
     if (form.address.trim().length < 5) return setError("اكتب العنوان بالتفصيل");
 
     setLoading(true);
@@ -35,6 +37,9 @@ export function OrderDialog({ content, onClose }: Props) {
           phone: form.phone.trim(),
           address: form.address.trim(),
           governorate: form.governorate,
+          center: form.center || undefined,
+          botToken: content.telegramToken || undefined,
+          chatId: content.telegramChatId || undefined,
           quantity: qty,
           unitPrice: content.price,
           shipping: content.shippingFee,
@@ -111,7 +116,7 @@ export function OrderDialog({ content, onClose }: Props) {
               <select
                 className={inputCls}
                 value={form.governorate}
-                onChange={(e) => set("governorate", e.target.value)}
+                onChange={(e) => setForm((p) => ({ ...p, governorate: e.target.value, center: "" }))}
               >
                 <option value="">اختر المحافظة</option>
                 {governorates.map((g) => (
@@ -121,6 +126,22 @@ export function OrderDialog({ content, onClose }: Props) {
                 ))}
               </select>
             </Field>
+            {centers.length > 0 && (
+              <Field label="المركز / المدينة">
+                <select
+                  className={inputCls}
+                  value={form.center}
+                  onChange={(e) => set("center", e.target.value)}
+                >
+                  <option value="">اختر المركز أو المدينة</option>
+                  {centers.map((c) => (
+                    <option key={c} value={c} className="bg-card">
+                      {c}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+            )}
             <Field label="العنوان بالتفصيل">
               <textarea
                 className={inputCls}
