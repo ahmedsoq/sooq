@@ -2,24 +2,27 @@ import { useRef, useState } from "react";
 import { Check, Loader2, RotateCcw, Save, Send, Upload, X } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { testTelegram } from "@/lib/orders.functions";
-import { saveMedia, deleteMedia } from "@/lib/media-store";
+import { uploadSiteMedia } from "@/lib/media-store";
 import type { SiteContent } from "@/lib/site-content";
 
 type Props = {
   content: SiteContent;
   update: (patch: Partial<SiteContent>) => void;
-  reset: () => void;
-  saveAll: () => boolean;
+  reset: () => void | Promise<unknown>;
+  saveAll: () => Promise<boolean>;
   onClose: () => void;
 };
 
 export function EditPanel({ content, update, reset, saveAll, onClose }: Props) {
   const [saved, setSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
 
-  const handleSave = () => {
-    const ok = saveAll();
+  const handleSave = async () => {
+    setSaving(true);
+    const ok = await saveAll();
+    setSaving(false);
     if (!ok) {
-      alert("تعذر حفظ التعديلات (مساحة المتصفح ممتلئة). جرب حذف صورة أو فيديو كبير.");
+      alert("تعذر حفظ التعديلات على السيرفر. تأكد من الاتصال بالإنترنت وحاول مرة أخرى.");
       return;
     }
     setSaved(true);
@@ -32,7 +35,7 @@ export function EditPanel({ content, update, reset, saveAll, onClose }: Props) {
         <h3 className="font-bold">لوحة التعديل</h3>
         <div className="flex gap-2">
           <button
-            onClick={reset}
+            onClick={() => void reset()}
             className="flex items-center gap-1 rounded-xl bg-secondary px-3 py-2 text-xs"
           >
             <RotateCcw className="size-3.5" /> استرجاع الأصلي
@@ -44,10 +47,14 @@ export function EditPanel({ content, update, reset, saveAll, onClose }: Props) {
       </div>
 
       <button
-        onClick={handleSave}
+        onClick={() => void handleSave()}
         className="mb-3 flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-bold text-primary-foreground"
       >
-        {saved ? (
+        {saving ? (
+          <>
+            <Loader2 className="size-4 animate-spin" /> جاري الحفظ...
+          </>
+        ) : saved ? (
           <>
             <Check className="size-4" /> تم حفظ كل التعديلات
           </>
@@ -59,8 +66,9 @@ export function EditPanel({ content, update, reset, saveAll, onClose }: Props) {
       </button>
 
       <p className="mb-4 rounded-xl bg-secondary/60 p-3 text-xs text-muted-foreground">
-        كل التعديلات تُحفظ تلقائياً على هذا الجهاز. للدخول لاحقاً: اضغط 7 مرات متتالية على اسم
-        المتجر بالأعلى ثم أدخل <span className="gold-text font-bold">الرقم السري</span>.
+        بعد الضغط على «حفظ كل التعديلات» يتم الحفظ على السيرفر وتظهر التعديلات في الموقع كله ولكل
+        الزوار. للدخول لاحقاً: اضغط 7 مرات متتالية على اسم المتجر بالأعلى ثم أدخل{" "}
+        <span className="gold-text font-bold">الرقم السري</span>.
       </p>
 
 
@@ -117,14 +125,12 @@ export function EditPanel({ content, update, reset, saveAll, onClose }: Props) {
         <FilePicker
           accept="video/*"
           label="رفع فيديو من الجهاز"
-          toIdb
           maxMb={120}
           onPick={(src) => update({ videoSrc: src })}
         />
         {content.videoSrc && (
           <p className="mb-2 rounded-lg bg-secondary/60 p-2 text-[11px] text-muted-foreground">
             ✅ يوجد فيديو محفوظ حالياً
-            {content.videoSrc.startsWith("idb://") ? " (مرفوع من الجهاز)" : ""}
           </p>
         )}
         <FilePicker
@@ -154,7 +160,6 @@ export function EditPanel({ content, update, reset, saveAll, onClose }: Props) {
         {content.videoSrc && (
           <button
             onClick={() => {
-              void deleteMedia(content.videoSrc);
               update({ videoSrc: "", videoPoster: "" });
             }}
             className="mb-2 rounded-lg bg-secondary px-3 py-2 text-xs"
@@ -354,31 +359,32 @@ function FilePicker({
   onPick,
   accept,
   label,
-  toIdb,
   maxMb = 4,
 }: {
   onPick: (src: string) => void;
   accept: string;
   label: string;
-  toIdb?: boolean;
   maxMb?: number;
 }) {
   const ref = useRef<HTMLInputElement>(null);
+  const [busy, setBusy] = useState(false);
   return (
     <div className="mb-2 flex gap-2">
       <button
         type="button"
+        disabled={busy}
         onClick={() => ref.current?.click()}
-        className="flex items-center gap-1 rounded-lg bg-secondary px-3 py-2 text-xs"
+        className="flex items-center gap-1 rounded-lg bg-secondary px-3 py-2 text-xs disabled:opacity-50"
       >
-        <Upload className="size-3.5" /> {label}
+        {busy ? <Loader2 className="size-3.5 animate-spin" /> : <Upload className="size-3.5" />}
+        {busy ? "جاري الرفع..." : label}
       </button>
       <input
         ref={ref}
         type="file"
         accept={accept}
         className="hidden"
-        onChange={(e) => {
+        onChange={async (e) => {
           const file = e.target.files?.[0];
           if (!file) return;
           if (file.size > maxMb * 1024 * 1024) {
@@ -387,15 +393,17 @@ function FilePicker({
             );
             return;
           }
-          if (toIdb) {
-            saveMedia(`video-${Date.now()}`, file)
-              .then((ref) => onPick(ref))
-              .catch(() => alert("تعذر حفظ الفيديو على المتصفح، جرب ملف أصغر أو رابط يوتيوب."));
-            return;
+          setBusy(true);
+          try {
+            const url = await uploadSiteMedia(file);
+            onPick(url);
+          } catch (err) {
+            console.error(err);
+            alert("تعذر رفع الملف. حاول مرة أخرى أو استخدم رابط خارجي.");
+          } finally {
+            setBusy(false);
+            e.target.value = "";
           }
-          const reader = new FileReader();
-          reader.onload = () => onPick(String(reader.result));
-          reader.readAsDataURL(file);
         }}
       />
     </div>

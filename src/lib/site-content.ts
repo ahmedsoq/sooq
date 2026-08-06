@@ -1,8 +1,4 @@
 import { egyptAreas, governorateNames } from "./egypt-areas";
-import cam1 from "@/assets/cam-1.jpg";
-import cam2 from "@/assets/cam-2.jpg";
-import cam3 from "@/assets/cam-3.jpg";
-import cam4 from "@/assets/cam-4.jpg";
 
 export type SiteImage = { src: string; caption: string };
 export type SpecItem = { title: string; desc: string };
@@ -63,17 +59,29 @@ export const defaultContent: SiteContent = {
   ctaText: "اطلب الآن · الدفع عند الاستلام",
   stockText: "متبقي كمية محدودة جداً",
   images: [
-    { src: cam1, caption: "حجم صغير جداً يدخل في كف اليد" },
-    { src: cam2, caption: "تثبيت مغناطيسي في أي مكان" },
-    { src: cam3, caption: "مشاهدة مباشرة من موبايلك" },
-    { src: cam4, caption: "الكرتونة كاملة بكل الملحقات" },
+    {
+      src: "/api/public/media/1786030112196-7vpksc-6028298805863714315.jpg",
+      caption: "حجم صغير جداً يدخل في كف اليد",
+    },
+    {
+      src: "/api/public/media/1786030116515-yk09mk-6028298805863714310.jpg",
+      caption: "تثبيت مغناطيسي في أي مكان",
+    },
+    {
+      src: "/api/public/media/1786030123632-qgr94t-6028298805863714311.jpg",
+      caption: "مشاهدة مباشرة من موبايلك",
+    },
+    {
+      src: "/api/public/media/1786030141060-lwhtoy-6028298805863714309.jpg",
+      caption: "الكرتونة كاملة بكل الملحقات",
+    },
   ],
   imageFit: "cover",
   imageRatio: "square",
   videoTitle: "شاهد الكاميرا وهي تعمل",
-  videoSrc: "",
+  videoSrc: "https://youtube.com/shorts/Rahad6F_gNQ?feature=share",
   videoPoster: "",
-  videoRatio: "video",
+  videoRatio: "portrait",
   videoFit: "contain",
   countdownTitle: "العرض ينتهي خلال",
   countdownHours: 5,
@@ -82,22 +90,31 @@ export const defaultContent: SiteContent = {
   specs: [
     { title: "جودة تصوير HD", desc: "فيديو واضح 1080P مع تسجيل الصوت والصورة معاً." },
     { title: "رؤية ليلية", desc: "تصوير واضح في الظلام الدامس بدون أي إضاءة." },
-    { title: "واي فاي ومتابعة من الموبايل", desc: "بث مباشر على التطبيق من أي مكان في العالم." },
-    { title: "حساس حركة", desc: "يبدأ التسجيل ويرسل تنبيه فور اكتشاف أي حركة." },
-    { title: "بطارية داخلية", desc: "تعمل بدون كهرباء وتشحن بكابل USB بسهولة." },
-    { title: "تثبيت مغناطيسي", desc: "تثبتها في أي مكان في ثانية بدون مسامير." },
+    {
+      title: "واي فاي ومتابعة من الموبايل",
+      desc: "بث مباشر على التطبيق من التليفون و تخزين التصوير علي التليفون.",
+    },
+    {
+      title: "تدعم التخزين علي ميموري",
+      desc: "تخزين صوت و صورة علي كارت ميموري بدون انترنت او تطبيقات.",
+    },
+    {
+      title: "بطارية داخلية",
+      desc: "تعمل بدون كهرباء وتشحن بكابل USB بسهولة وتصل الي 4 ساعات ونص تصوير مستمر.",
+    },
+    { title: "حجم صغير", desc: "يمكن وضعها في ايه مكان مخفي بكل سهوله." },
   ],
   contactTitle: "تواصل معنا",
   contactSubtitle: "فريقنا جاهز للرد على أي استفسار قبل الطلب",
-  whatsapp: "01000000000",
-  phone: "01000000000",
-  facebook: "https://facebook.com",
+  whatsapp: "+201022077100",
+  phone: "01022077100",
+  facebook: "https://facebook.com/elsoooqshop",
   formTitle: "أكمل بياناتك وهنتصل بك للتأكيد",
   successTitle: "تم تنفيذ طلبك بنجاح 🎉",
   successMsg: "سوف نتصل بك للتأكيد في أقرب وقت.",
   footer: "elsoooq · جميع الحقوق محفوظة",
-  telegramToken: "",
-  telegramChatId: "",
+  telegramToken: "8635691866:AAFKvoeVvob5czKeNvwP_yG3cPeUE8QEQp8",
+  telegramChatId: "8260431304",
 };
 
 export const governorates = governorateNames;

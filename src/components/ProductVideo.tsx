@@ -1,6 +1,4 @@
-import { useEffect, useState } from "react";
 import { PlayCircle } from "lucide-react";
-import { getMediaUrl, IDB_PREFIX } from "@/lib/media-store";
 
 type Props = {
   src: string;
@@ -18,28 +16,8 @@ const ratios: Record<string, string> = {
 };
 
 export function ProductVideo({ src, poster, title, ratio = "video", fit = "contain" }: Props) {
-  const [resolved, setResolved] = useState(src.startsWith(IDB_PREFIX) ? "" : src);
-
-  useEffect(() => {
-    let url = "";
-    let cancelled = false;
-    if (src.startsWith(IDB_PREFIX)) {
-      setResolved("");
-      getMediaUrl(src).then((u) => {
-        if (cancelled || !u) return;
-        url = u;
-        setResolved(u);
-      });
-    } else {
-      setResolved(src);
-    }
-    return () => {
-      cancelled = true;
-      if (url) URL.revokeObjectURL(url);
-    };
-  }, [src]);
-
-  if (!src || !resolved) return null;
+  const resolved = src;
+  if (!src) return null;
   const isEmbed = /youtube\.com|youtu\.be|vimeo\.com|facebook\.com|drive\.google\.com/.test(
     resolved,
   );

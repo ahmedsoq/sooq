@@ -1,57 +1,66 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { defaultContent, type SiteContent } from "./site-content";
+import { loadContent, resetContent, saveContent } from "./content.functions";
+import { getAdminPin } from "@/components/AdminGate";
 
-const KEY = "elsoooq_content_v1";
-
+/**
+ * المحتوى محفوظ على السيرفر (Lovable Cloud) وليس على الجهاز،
+ * فأي تعديل يتم حفظه يظهر على الموقع كله ولكل الزوار.
+ */
 export function useContent() {
   const [content, setContent] = useState<SiteContent>(defaultContent);
   const [hydrated, setHydrated] = useState(false);
   const latest = useRef<SiteContent>(defaultContent);
 
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(KEY);
-      if (raw) {
-        const next = { ...defaultContent, ...(JSON.parse(raw) as SiteContent) };
+    let cancelled = false;
+    loadContent()
+      .then((res) => {
+        if (cancelled) return;
+        const saved = JSON.parse(res.json) as Partial<SiteContent>;
+        const next = { ...defaultContent, ...saved };
         latest.current = next;
         setContent(next);
-      }
-    } catch {
-      /* ignore */
-    }
-    setHydrated(true);
+      })
+      .catch((e) => console.error(e))
+      .finally(() => {
+        if (!cancelled) setHydrated(true);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const update = useCallback((patch: Partial<SiteContent>) => {
     setContent((prev) => {
       const next = { ...prev, ...patch };
       latest.current = next;
-      try {
-        localStorage.setItem(KEY, JSON.stringify(next));
-      } catch {
-        /* ignore */
-      }
       return next;
     });
   }, []);
 
-  const saveAll = useCallback(() => {
+  const saveAll = useCallback(async () => {
     try {
-      localStorage.setItem(KEY, JSON.stringify(latest.current));
-      return true;
-    } catch {
+      const res = await saveContent({
+        data: { pin: getAdminPin(), json: JSON.stringify(latest.current) },
+      });
+      return res.ok;
+    } catch (e) {
+      console.error(e);
       return false;
     }
   }, []);
 
-  const reset = useCallback(() => {
+  const reset = useCallback(async () => {
     try {
-      localStorage.removeItem(KEY);
-    } catch {
-      /* ignore */
+      await resetContent({ data: { pin: getAdminPin() } });
+    } catch (e) {
+      console.error(e);
+      return false;
     }
     latest.current = defaultContent;
     setContent(defaultContent);
+    return true;
   }, []);
 
   return { content, update, reset, saveAll, hydrated };

@@ -1,9 +1,17 @@
 import { useEffect, useRef, useState } from "react";
 import { Lock } from "lucide-react";
 
-// الرقم السري للدخول إلى لوحة التحكم — غيّره من هنا
+import { verifyPin } from "@/lib/content.functions";
+
+// الرقم السري الافتراضي (يمكن تغييره من إعدادات السيرفر ADMIN_PIN)
 export const ADMIN_PIN = "2468";
-const STORAGE_KEY = "elsoooq_admin_ok";
+const STORAGE_KEY = "elsoooq_admin_pin";
+
+/** الرقم السري للجلسة الحالية — يُستخدم لتوثيق الحفظ على السيرفر */
+export function getAdminPin(): string {
+  if (typeof window === "undefined") return "";
+  return sessionStorage.getItem(STORAGE_KEY) ?? "";
+}
 
 /**
  * دخول مخفي: 7 نقرات سريعة على اسم المتجر (أو ?panel=1 في الرابط)
@@ -16,7 +24,7 @@ export function useHiddenAdmin() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    if (sessionStorage.getItem(STORAGE_KEY) === "1") return;
+    if (getAdminPin()) return;
     if (new URLSearchParams(window.location.search).has("panel")) setAskPin(true);
   }, []);
 
@@ -25,7 +33,7 @@ export function useHiddenAdmin() {
     taps.current = [...taps.current, now].filter((t) => now - t < 3000);
     if (taps.current.length >= 7) {
       taps.current = [];
-      if (typeof window !== "undefined" && sessionStorage.getItem(STORAGE_KEY) === "1") {
+      if (getAdminPin()) {
         setUnlocked(true);
       } else {
         setAskPin(true);
@@ -33,9 +41,14 @@ export function useHiddenAdmin() {
     }
   };
 
-  const submitPin = (pin: string) => {
-    if (pin !== ADMIN_PIN) return false;
-    sessionStorage.setItem(STORAGE_KEY, "1");
+  const submitPin = async (pin: string) => {
+    try {
+      const res = await verifyPin({ data: { pin } });
+      if (!res.ok) return false;
+    } catch {
+      return false;
+    }
+    sessionStorage.setItem(STORAGE_KEY, pin);
     setAskPin(false);
     setUnlocked(true);
     return true;
@@ -55,7 +68,7 @@ export function PinDialog({
   onSubmit,
   onClose,
 }: {
-  onSubmit: (pin: string) => boolean;
+  onSubmit: (pin: string) => Promise<boolean>;
   onClose: () => void;
 }) {
   const [pin, setPin] = useState("");
@@ -69,9 +82,10 @@ export function PinDialog({
     >
       <form
         onClick={(e) => e.stopPropagation()}
-        onSubmit={(e) => {
+        onSubmit={async (e) => {
           e.preventDefault();
-          if (!onSubmit(pin)) {
+          const ok = await onSubmit(pin);
+          if (!ok) {
             setError(true);
             setPin("");
           }
