@@ -21,6 +21,16 @@ export type SiteContent = {
   ctaText: string;
   stockText: string;
   images: SiteImage[];
+  imageFit: "cover" | "contain";
+  imageRatio: "square" | "video" | "portrait";
+  videoTitle: string;
+  videoSrc: string;
+  videoPoster: string;
+  videoRatio: "square" | "video" | "portrait";
+  videoFit: "cover" | "contain";
+  countdownTitle: string;
+  countdownHours: number;
+  liveOrders: boolean;
   specsTitle: string;
   specs: SpecItem[];
   contactTitle: string;
@@ -55,6 +65,16 @@ export const defaultContent: SiteContent = {
     { src: cam3, caption: "مشاهدة مباشرة من موبايلك" },
     { src: cam4, caption: "الكرتونة كاملة بكل الملحقات" },
   ],
+  imageFit: "cover",
+  imageRatio: "square",
+  videoTitle: "شاهد الكاميرا وهي تعمل",
+  videoSrc: "",
+  videoPoster: "",
+  videoRatio: "video",
+  videoFit: "contain",
+  countdownTitle: "العرض ينتهي خلال",
+  countdownHours: 5,
+  liveOrders: true,
   specsTitle: "المواصفات",
   specs: [
     { title: "جودة تصوير HD", desc: "فيديو واضح 1080P مع تسجيل الصوت والصورة معاً." },

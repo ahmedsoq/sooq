@@ -27,9 +27,10 @@ export function EditPanel({ content, update, reset, onClose }: Props) {
         </div>
       </div>
       <p className="mb-4 rounded-xl bg-secondary/60 p-3 text-xs text-muted-foreground">
-        كل التعديلات تُحفظ تلقائياً على هذا الجهاز. افتح اللوحة في أي وقت بإضافة{" "}
-        <span className="gold-text font-bold">?edit=1</span> في نهاية رابط الموقع.
+        كل التعديلات تُحفظ تلقائياً على هذا الجهاز. للدخول لاحقاً: اضغط 7 مرات متتالية على اسم
+        المتجر بالأعلى ثم أدخل <span className="gold-text font-bold">الرقم السري</span>.
       </p>
+
 
       <Section title="الهوية والعروض">
         <T label="اسم الموقع" v={content.brand} on={(v) => update({ brand: v })} />
@@ -58,11 +59,99 @@ export function EditPanel({ content, update, reset, onClose }: Props) {
         <T label="ملاحظة تحت السعر" v={content.priceNote} on={(v) => update({ priceNote: v })} />
       </Section>
 
+      <Section title="العد التنازلي والإشعارات">
+        <T
+          label="نص العد التنازلي"
+          v={content.countdownTitle}
+          on={(v) => update({ countdownTitle: v })}
+        />
+        <N
+          label="مدة العرض بالساعات"
+          v={content.countdownHours}
+          on={(v) => update({ countdownHours: v })}
+        />
+        <label className="mb-2 flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={content.liveOrders}
+            onChange={(e) => update({ liveOrders: e.target.checked })}
+          />
+          تفعيل إشعارات الطلبات الحية
+        </label>
+      </Section>
+
+      <Section title="فيديو المنتج">
+        <T label="عنوان القسم" v={content.videoTitle} on={(v) => update({ videoTitle: v })} />
+        <T
+          label="رابط الفيديو (يوتيوب أو رابط mp4)"
+          v={content.videoSrc}
+          on={(v) => update({ videoSrc: v })}
+        />
+        <FilePicker
+          accept="video/*"
+          label="رفع فيديو من الجهاز"
+          onPick={(src) => update({ videoSrc: src })}
+        />
+        <FilePicker
+          accept="image/*"
+          label="رفع صورة غلاف للفيديو"
+          onPick={(src) => update({ videoPoster: src })}
+        />
+        <S
+          label="مقاس الفيديو"
+          v={content.videoRatio}
+          on={(v) => update({ videoRatio: v as typeof content.videoRatio })}
+          options={[
+            ["video", "عرضي 16:9"],
+            ["square", "مربع 1:1"],
+            ["portrait", "طولي 9:16 (ريلز)"],
+          ]}
+        />
+        <S
+          label="طريقة العرض"
+          v={content.videoFit}
+          on={(v) => update({ videoFit: v as typeof content.videoFit })}
+          options={[
+            ["contain", "إظهار الفيديو كامل"],
+            ["cover", "ملء الإطار (قص الأطراف)"],
+          ]}
+        />
+        {content.videoSrc && (
+          <button
+            onClick={() => update({ videoSrc: "", videoPoster: "" })}
+            className="mb-2 rounded-lg bg-secondary px-3 py-2 text-xs"
+          >
+            حذف الفيديو
+          </button>
+        )}
+      </Section>
+
       <Section title="الصور">
+        <S
+          label="مقاس معرض الصور"
+          v={content.imageRatio}
+          on={(v) => update({ imageRatio: v as typeof content.imageRatio })}
+          options={[
+            ["square", "مربع 1:1"],
+            ["video", "عرضي 16:9"],
+            ["portrait", "طولي 9:16"],
+          ]}
+        />
+        <S
+          label="طريقة عرض الصور"
+          v={content.imageFit}
+          on={(v) => update({ imageFit: v as typeof content.imageFit })}
+          options={[
+            ["cover", "ملء الإطار (قص الأطراف)"],
+            ["contain", "إظهار الصورة كاملة"],
+          ]}
+        />
         {content.images.map((img, i) => (
           <div key={i} className="mb-3 rounded-xl bg-secondary/50 p-3">
-            <img src={img.src} alt="" className="mb-2 h-24 w-full rounded-lg object-cover" />
-            <ImagePicker
+            <img src={img.src} alt="" className="mb-2 h-24 w-full rounded-lg object-contain" />
+            <FilePicker
+              accept="image/*"
+              label="رفع صورة"
               onPick={(src) => {
                 const next = [...content.images];
                 next[i] = { ...next[i]!, src };
@@ -180,7 +269,40 @@ function N({ label, v, on }: { label: string; v: number; on: (v: number) => void
   );
 }
 
-function ImagePicker({ onPick }: { onPick: (src: string) => void }) {
+function S({
+  label,
+  v,
+  on,
+  options,
+}: {
+  label: string;
+  v: string;
+  on: (v: string) => void;
+  options: [string, string][];
+}) {
+  return (
+    <label className="mb-2 block">
+      <span className="mb-1 block text-xs text-muted-foreground">{label}</span>
+      <select className={cls} value={v} onChange={(e) => on(e.target.value)}>
+        {options.map(([val, txt]) => (
+          <option key={val} value={val}>
+            {txt}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
+function FilePicker({
+  onPick,
+  accept,
+  label,
+}: {
+  onPick: (src: string) => void;
+  accept: string;
+  label: string;
+}) {
   const ref = useRef<HTMLInputElement>(null);
   return (
     <div className="mb-2 flex gap-2">
@@ -189,16 +311,20 @@ function ImagePicker({ onPick }: { onPick: (src: string) => void }) {
         onClick={() => ref.current?.click()}
         className="flex items-center gap-1 rounded-lg bg-secondary px-3 py-2 text-xs"
       >
-        <Upload className="size-3.5" /> رفع صورة
+        <Upload className="size-3.5" /> {label}
       </button>
       <input
         ref={ref}
         type="file"
-        accept="image/*"
+        accept={accept}
         className="hidden"
         onChange={(e) => {
           const file = e.target.files?.[0];
           if (!file) return;
+          if (file.size > 4 * 1024 * 1024) {
+            alert("الملف كبير جداً (الحد 4 ميجا). ارفعه على يوتيوب وضع الرابط بدلاً من ذلك.");
+            return;
+          }
           const reader = new FileReader();
           reader.onload = () => onPick(String(reader.result));
           reader.readAsDataURL(file);
@@ -207,3 +333,4 @@ function ImagePicker({ onPick }: { onPick: (src: string) => void }) {
     </div>
   );
 }
+

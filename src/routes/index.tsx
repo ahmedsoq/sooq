@@ -7,7 +7,6 @@ import {
   Facebook,
   Flame,
   MessageCircle,
-  Pencil,
   Phone,
   ShieldCheck,
   Truck,
@@ -16,6 +15,10 @@ import {
 import { OrderDialog } from "@/components/OrderDialog";
 import { EditPanel } from "@/components/EditPanel";
 import { useContent } from "@/lib/use-content";
+import { PinDialog, useHiddenAdmin } from "@/components/AdminGate";
+import { Countdown } from "@/components/Countdown";
+import { ProductVideo } from "@/components/ProductVideo";
+import { LiveOrders } from "@/components/LiveOrders";
 
 export const Route = createFileRoute("/")({
   component: Index,
@@ -44,12 +47,7 @@ function Index() {
   const { content, update, reset, hydrated } = useContent();
   const [active, setActive] = useState(0);
   const [orderOpen, setOrderOpen] = useState(false);
-  const [editOpen, setEditOpen] = useState(false);
-
-  useEffect(() => {
-    if (typeof window !== "undefined" && window.location.search.includes("edit=1"))
-      setEditOpen(true);
-  }, []);
+  const admin = useHiddenAdmin();
 
   useEffect(() => {
     if (orderOpen) return;
@@ -76,17 +74,10 @@ function Index() {
       </div>
 
       <header className="mx-auto flex max-w-5xl items-center justify-between px-4 py-4">
-        <div>
+        <div onClick={admin.secretTap} className="cursor-default select-none">
           <h2 className="text-2xl font-black tracking-tight gold-text">{content.brand}</h2>
           <p className="text-xs text-muted-foreground">{content.brandTag}</p>
         </div>
-        <button
-          onClick={() => setEditOpen(true)}
-          className="glass rounded-xl p-2 text-muted-foreground"
-          aria-label="تعديل الموقع"
-        >
-          <Pencil className="size-4" />
-        </button>
       </header>
 
       <main className="mx-auto max-w-5xl space-y-5 px-4">
@@ -101,21 +92,41 @@ function Index() {
             </span>
           </div>
 
-          <div className="relative aspect-square w-full overflow-hidden rounded-2xl bg-secondary">
+          <div
+            className={`relative w-full overflow-hidden rounded-2xl bg-secondary ${
+              content.imageRatio === "video"
+                ? "aspect-video"
+                : content.imageRatio === "portrait"
+                  ? "aspect-[9/16]"
+                  : "aspect-square"
+            }`}
+          >
             {content.images.map((img, i) => (
-              <img
+              <div
                 key={i}
-                src={img.src}
-                alt={img.caption}
-                width={1024}
-                height={1024}
-                loading={i === 0 ? "eager" : "lazy"}
-                className={`absolute inset-0 size-full object-cover transition-all duration-700 ${
+                className={`absolute inset-0 transition-all duration-700 ${
                   i === active ? "scale-100 opacity-100" : "scale-105 opacity-0"
                 }`}
-              />
+              >
+                {content.imageFit === "contain" && (
+                  <img
+                    src={img.src}
+                    alt=""
+                    aria-hidden
+                    className="absolute inset-0 size-full scale-110 object-cover blur-2xl opacity-40"
+                  />
+                )}
+                <img
+                  src={img.src}
+                  alt={img.caption}
+                  loading={i === 0 ? "eager" : "lazy"}
+                  className={`absolute inset-0 size-full ${
+                    content.imageFit === "contain" ? "object-contain" : "object-cover"
+                  }`}
+                />
+              </div>
             ))}
-            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-4 pt-10">
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-4 pt-10">
               <p className="text-sm font-semibold">{content.images[active]?.caption}</p>
             </div>
             <button
@@ -141,7 +152,7 @@ function Index() {
               <button
                 key={i}
                 onClick={() => setActive(i)}
-                className={`overflow-hidden rounded-xl border-2 transition ${
+                className={`overflow-hidden rounded-xl border-2 bg-secondary transition ${
                   i === active ? "border-primary" : "border-transparent opacity-60"
                 }`}
               >
@@ -149,7 +160,9 @@ function Index() {
                   src={img.src}
                   alt={img.caption}
                   loading="lazy"
-                  className="aspect-square size-full object-cover"
+                  className={`aspect-square size-full ${
+                    content.imageFit === "contain" ? "object-contain" : "object-cover"
+                  }`}
                 />
               </button>
             ))}
@@ -174,6 +187,9 @@ function Index() {
               <Chip icon={<ShieldCheck className="size-3.5" />} text="ضمان الاستبدال" />
             </div>
             <p className="mt-3 animate-pulse text-xs font-bold text-accent">{content.stockText}</p>
+            {hydrated && (
+              <Countdown hours={content.countdownHours} title={content.countdownTitle} />
+            )}
             <button
               onClick={() => setOrderOpen(true)}
               className="cta-pulse mt-4 w-full rounded-2xl gold-fill px-4 py-4 text-lg font-black"
@@ -182,6 +198,17 @@ function Index() {
             </button>
           </div>
         </section>
+
+        {content.videoSrc && (
+          <ProductVideo
+            src={content.videoSrc}
+            poster={content.videoPoster}
+            title={content.videoTitle}
+            ratio={content.videoRatio}
+            fit={content.videoFit}
+          />
+        )}
+
 
         {/* كرت المواصفات */}
         <section className="glass rounded-3xl p-5">
@@ -246,16 +273,18 @@ function Index() {
         </button>
       </div>
 
+      {hydrated && content.liveOrders && !orderOpen && (
+        <LiveOrders productName={content.heroTitle} />
+      )}
+
+
+
       {hydrated && orderOpen && (
         <OrderDialog content={content} onClose={() => setOrderOpen(false)} />
       )}
-      {editOpen && (
-        <EditPanel
-          content={content}
-          update={update}
-          reset={reset}
-          onClose={() => setEditOpen(false)}
-        />
+      {admin.askPin && <PinDialog onSubmit={admin.submitPin} onClose={admin.closePin} />}
+      {admin.unlocked && (
+        <EditPanel content={content} update={update} reset={reset} onClose={admin.lock} />
       )}
     </div>
   );
